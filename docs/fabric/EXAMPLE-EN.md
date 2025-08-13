@@ -229,6 +229,10 @@ choose
 Packages the chaincode source code along with the required modules into a *.tar* package called *fabcar* with version 1.
 
 ```bash
+# Before executing chaincode command, do go vendor to enable go packages
+cd chaincode/fabcar/go
+go mod vendor
+
 bdk fabric chaincode package -i
 ```
 choose
@@ -436,11 +440,11 @@ choose
 - orderer0.orderer.org0.example.com:7050
 - Yes
 - peer0.org0.example.com:7051, peer1.org1.example.com:7051
-```bash
 
 ## Add New Channel
 
 ### Step 1：Create channel
+
 
 First, we edit the organization name *BDK_ORG_NAME* and domain name *BDK_ORG_DOMAIN* set in the file *~/.bdk/.env*. We then create an [application channel](https://hyperledger-fabric.readthedocs.io/en/release-2.2/create_channel/create_channel_overview.html?highlight=channel) named *test1*, note that we set the flag `--channelAdminPolicyStyle` as `All-Initial-Member`.
 
@@ -525,6 +529,84 @@ choose
 - test1
 - orderer0.orderer.org0.example.com:7050
 - 7051
+
+## Joining a Channel Using Snapshot
+
+### Step 1: Execute `submitSnapshot` on a peer already in the channel
+
+```bash
+# peer0 in Org0 is already in the channel (channel name: test)
+export BDK_ORG_NAME='Org0'
+export BDK_ORG_DOMAIN='org0.example.com'
+export BDK_HOSTNAME='peer0'
+export PEER_ADDRESS=peer0.org0.example.com:7051
+
+bdk fabric channel snapshot -i
+```
+
+choose
+- Operation : submitRequest
+- Channel Name : test
+- Block Number : 0 (execute snapshot immediately) or N (execute snapshot after N blocks)
+
+p.s. The completed snapshot will be copied to host under .bdk/fabric/{networkName}/peerOrganizations/{domain}/peers/peer{number}.{domain}/snapshots/completed/{channelName}/{blockHeight}
+
+### Step 2 (Optional) : Check submitted snapshot requests
+
+```bash
+export BDK_ORG_NAME='Org0'
+export BDK_ORG_DOMAIN='org0.example.com'
+export BDK_HOSTNAME='peer0'
+export PEER_ADDRESS=peer0.org0.example.com:7051
+
+bdk fabric channel snapshot -i
+```
+
+choose
+- Operation : listPending
+- Channel Name : test
+
+This command lists all pending snapshot requests (requests with blockNumber=0 will not appear).
+
+### Step 3 (Optional): Delete unnecessary snapshot requests
+
+```bash
+export BDK_ORG_NAME='Org0'
+export BDK_ORG_DOMAIN='org0.example.com'
+export BDK_HOSTNAME='peer0'
+export PEER_ADDRESS=peer0.org0.example.com:7051
+
+bdk fabric channel snapshot -i
+```
+choose
+- Operation : cancelRequest
+- Channel Name : test
+- Block Number : N (the snapshot request for block N will be deleted)
+
+After deletion, run listPending again to verify the request has been removed.
+
+### Step 4: Use `joinBySnapshot` to add the new peer to the channel
+
+```bash
+export BDK_ORG_NAME='Org1'
+export BDK_ORG_DOMAIN='org1.example.com'
+export BDK_HOSTNAME='peer0'
+export PEER_ADDRESS=peer0.org1.example.com:8051
+
+bdk fabric channel snapshot -i
+```
+
+choose
+- Operation : joinBySnapshot
+- Snapshot Path : $.bdk/fabric/bdk-fabric-network/peerOrganizations/org0.example.com/peers/peer0.org0.example.com/snapshots/completed/test/0/ (Example) (Enter the absolute path of the snapshot directory on host)
+
+### Step 5: Verify whether the new peer has joined the channel successfully
+
+```bash
+# Inside peer0.org1.example.com's container, run `peer channel list or peer channel getinfo` to check if it has joined
+peer channel list
+peer channel getinfo -c {channelName}
+```
 
 ## Add new peer org
 
