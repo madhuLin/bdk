@@ -25,7 +25,6 @@ import { AbstractService, ParserType } from './Service.abstract'
 import { DockerResultType, InfraRunnerResultType } from '../instance/infra/InfraRunner.interface'
 import { ProcessError, SnapshotError } from '../../util'
 import fs from 'fs-extra'
-import os from 'os'
 import { exec } from 'child_process' // Import exec from child_process
 import { promisify } from 'util' // Import promisify to use exec with async/await
 
@@ -446,7 +445,7 @@ export default class Channel extends AbstractService {
     const result = await (new FabricInstance(this.config, this.infra)).submitSnapshotRequest(params.channelName, params.blockNumber)
     const containerName = `${this.config.hostname}.${this.config.orgDomainName}`
     const sourceContainerPath = '/var/hyperledger/production/snapshots/'
-    const hostDestinationPath = `${os.homedir()}/.bdk/fabric/${this.config.networkName}/peerOrganizations/${this.config.orgDomainName}/peers/${this.config.hostname}.${this.config.orgDomainName}/`
+    const hostDestinationPath = `${this.config.infraConfig.bdkPath}/${this.config.networkName}/peerOrganizations/${this.config.orgDomainName}/peers/${this.config.hostname}.${this.config.orgDomainName}/`
     const copyCommand = `docker cp ${containerName}:${sourceContainerPath} ${hostDestinationPath}`
     try {
       const { stdout, stderr } = await execPromise(copyCommand)
@@ -493,15 +492,12 @@ export default class Channel extends AbstractService {
   public async joinBySnapshot (
     params: ChannelJoinBySnapshotType,
   ): Promise<InfraRunnerResultType> {
-    const homeDir = os.homedir()
-    const snapshotPath = `${homeDir}/.bdk/fabric/${this.config.networkName}/peerOrganizations/${this.config.orgDomainName}/peers/${this.config.hostname}.${this.config.orgDomainName}/snapshots/temp`
+    const snapshotPath = `${this.config.infraConfig.bdkPath}/${this.config.networkName}/peerOrganizations/${this.config.orgDomainName}/peers/${this.config.hostname}.${this.config.orgDomainName}/snapshots/temp`
     try {
-      if (!fs.pathExistsSync(snapshotPath)) {
-        fs.mkdirpSync(snapshotPath)
-      }
-      await fs.copy(`${homeDir}/${params.snapshotPath}`, snapshotPath, { overwrite: true })
+      if (!fs.pathExistsSync(snapshotPath)) { fs.mkdirpSync(snapshotPath) }
+      await fs.copy(`${params.snapshotPath}`, snapshotPath, { overwrite: true })
     } catch (e: any) {
-      throw new SnapshotError(`Failed to copy snapshot from '${homeDir}/${params.snapshotPath}' to '${snapshotPath}': ${e.message}`)
+      throw new SnapshotError(`Failed to copy snapshot from '${params.snapshotPath}' to '${snapshotPath}': ${e.message}`)
     }
 
     const dockerSnapshotPath = `/tmp/peerOrganizations/${this.config.orgDomainName}/peers/${this.config.hostname}.${this.config.orgDomainName}/snapshots/temp`

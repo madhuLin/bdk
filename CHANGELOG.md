@@ -8,6 +8,7 @@ All notable changes to BDK project will be documented here.
 ### Features
 
 * Add 4 snapshot commands: submitSnapshot, listPending, cancelRequest, joinBySnapshot
+* Update fabric version to v2.5.10
 
 ### Fixes
 
