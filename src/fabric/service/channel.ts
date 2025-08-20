@@ -452,8 +452,6 @@ export default class Channel extends AbstractService {
       if (stderr) {
         throw new Error(`[Snapshot Copy] Error during Docker CP: ${stderr}`)
       }
-      console.log(`[Snapshot Copy] Docker CP stdout: ${stdout}`)
-      console.log(`[Snapshot Copy] Successfully initiated snapshot copy to host: ${hostDestinationPath}`)
     } catch (e: any) {
       throw new SnapshotError(`Failed to copy snapshot from container: ${e.message}`)
     }
