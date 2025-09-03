@@ -11,6 +11,7 @@ import { DockerResultType } from '../../../src/fabric/instance/infra/InfraRunner
 import Peer from '../../../src/fabric/service/peer'
 import Orderer from '../../../src/fabric/service/orderer'
 import Discover from '../../../src/fabric/service/discover'
+import { execSync } from 'child_process'
 
 describe('Channel service:', function () {
   this.timeout(60000)
@@ -19,6 +20,7 @@ describe('Channel service:', function () {
   let networkCreateJson: NetworkCreateType
   let channelService: Channel
   let channelServiceOrg0Peer: Channel
+  let channelServiceOrg1Peer: Channel
   let channelServiceOrg0Orderer: Channel
   let peerService: Peer
   let ordererService: Orderer
@@ -28,6 +30,7 @@ describe('Channel service:', function () {
     networkCreateJson = JSON.parse(fs.readFileSync('./cicd/test_script/network-create-min.json').toString())
     channelService = new Channel(config)
     channelServiceOrg0Peer = new Channel(minimumNetwork.org0PeerConfig)
+    channelServiceOrg1Peer = new Channel(minimumNetwork.org1PeerConfig)
     channelServiceOrg0Orderer = new Channel(minimumNetwork.org0OrdererConfig)
     peerService = new Peer(config)
     ordererService = new Orderer(config)
@@ -822,6 +825,116 @@ describe('Channel service:', function () {
     it('should list joined channel', async () => {
       const joinedChannel = Channel.parser.listJoinedChannel(await channelServiceOrg0Peer.listJoinedChannel() as DockerResultType)
       assert.deepStrictEqual(joinedChannel, [minimumNetwork.channelName])
+    })
+  })
+
+  describe('snapshot operations', () => {
+    let channelName: string
+    const testSnapshotPath1 = `${config.infraConfig.bdkPath}/${config.networkName}/peerOrganizations/org0.bdk.example.com/peers/peer0.org0.bdk.example.com/snapshots/completed/test-channel/0/`
+    const testSnapshotPath2 = `${config.infraConfig.bdkPath}/${config.networkName}/peerOrganizations/org0.bdk.example.com/peers/peer0.org0.bdk.example.com/snapshots/completed/test-channel/1/`
+    const testSnapshotPath3 = `${config.infraConfig.bdkPath}/${config.networkName}/peerOrganizations/org0.bdk.example.com/peers/peer0.org0.bdk.example.com/snapshots/completed/test-channel/2/`
+    let testSnapshotPath = ''
+
+    before(async () => {
+      await minimumNetwork.createNetwork()
+      await minimumNetwork.peerAndOrdererUp()
+      await minimumNetwork.createChannelAndJoin()
+      channelName = minimumNetwork.channelName
+    })
+
+    after(async () => {
+      await minimumNetwork.deleteNetwork()
+    })
+
+    describe('submitSnapshotRequest', () => {
+      it('should call FabricInstance with the return "submit reqeust successfully".', async () => {
+        process.env.BDK_HOSTNAME = minimumNetwork.getPeer().hostname
+        process.env.BDK_ORG_DOMAIN = minimumNetwork.getPeer().orgDomain
+        process.env.PEER_ADDRESS = `${minimumNetwork.getPeer().hostname}.${minimumNetwork.getPeer().orgDomain}:7051`
+        process.env.BDK_ORG_NAME = minimumNetwork.getPeer().orgName
+        await channelServiceOrg0Peer.submitSnapshotRequest({
+          channelName,
+          blockNumber: 0,
+        })
+
+        const result = await channelServiceOrg0Peer.submitSnapshotRequest({
+          channelName,
+          blockNumber: 10,
+        })
+
+        assert.match('stdout' in result ? result.stdout : '', /Snapshot request submitted successfully/)
+      })
+    })
+
+    describe('listPendingSnapshots', () => {
+      it('should call FabricInstance with the return that list the pending snapshots.', async () => {
+        process.env.BDK_HOSTNAME = minimumNetwork.getPeer().hostname
+        process.env.BDK_ORG_DOMAIN = minimumNetwork.getPeer().orgDomain
+        process.env.PEER_ADDRESS = `${minimumNetwork.getPeer().hostname}.${minimumNetwork.getPeer().orgDomain}:7051`
+        process.env.BDK_ORG_NAME = minimumNetwork.getPeer().orgName
+        await channelServiceOrg0Peer.submitSnapshotRequest({
+          channelName,
+          blockNumber: 100,
+        })
+        const result = await channelServiceOrg0Peer.listPendingSnapshots({
+          channelName,
+        })
+        // check wheter the return contains the block number in submit request
+        assert.match('stdout' in result ? result.stdout : '', /100/)
+      })
+    })
+
+    describe('cancelSnapshotRequest', () => {
+      it('should call FabricInstance with the return that does not list the snapshots after cancel request.', async () => {
+        process.env.BDK_HOSTNAME = minimumNetwork.getPeer().hostname
+        process.env.BDK_ORG_DOMAIN = minimumNetwork.getPeer().orgDomain
+        process.env.PEER_ADDRESS = `${minimumNetwork.getPeer().hostname}.${minimumNetwork.getPeer().orgDomain}:7051`
+        process.env.BDK_ORG_NAME = minimumNetwork.getPeer().orgName
+        await channelServiceOrg0Peer.submitSnapshotRequest({
+          channelName,
+          blockNumber: 20,
+        })
+        await channelServiceOrg0Peer.submitSnapshotRequest({
+          channelName,
+          blockNumber: 30,
+        })
+
+        // cancel request
+        await channelServiceOrg0Peer.cancelSnapshotRequest({
+          channelName,
+          blockNumber: 30,
+        })
+        const resultWithCancel = await channelServiceOrg0Peer.listPendingSnapshots({
+          channelName,
+        })
+        // check whether the canceled request has been excluded in the listPending return
+        assert.doesNotMatch('stdout' in resultWithCancel ? resultWithCancel.stdout : '', /30/)
+      })
+    })
+
+    describe('joinBySnapshot', () => {
+      it('should call FabricInstance and return the name of joined channel', async () => {
+        process.env.BDK_HOSTNAME = minimumNetwork.getPeer(1, 0).hostname
+        process.env.BDK_ORG_DOMAIN = minimumNetwork.getPeer(1, 0).orgDomain
+        process.env.PEER_ADDRESS = `${minimumNetwork.getPeer(1, 0).hostname}.${minimumNetwork.getPeer(1, 0).orgDomain}:8051`
+        process.env.BDK_ORG_NAME = minimumNetwork.getPeer(1, 0).orgName
+
+        if (fs.existsSync(testSnapshotPath1)) {
+          testSnapshotPath = testSnapshotPath1
+        } else if (fs.existsSync(testSnapshotPath2)) {
+          testSnapshotPath = testSnapshotPath2
+        } else if (fs.existsSync(testSnapshotPath3)) {
+          testSnapshotPath = testSnapshotPath3
+        }
+
+        await channelServiceOrg1Peer.joinBySnapshot({
+          snapshotPath: testSnapshotPath,
+        })
+        // execute "peer channel list" to check wheter the peer has joined the channel successfully
+        const dockerPeerCommand = 'docker exec peer0.org1.bdk.example.com peer channel list'
+        const result = execSync(dockerPeerCommand).toString()
+        assert.match(result, /test-channel/)
+      })
     })
   })
 })

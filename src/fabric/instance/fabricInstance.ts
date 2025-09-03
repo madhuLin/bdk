@@ -391,4 +391,79 @@ export default class FabricInstance extends AbstractInstance {
       undefined,
       options)
   }
+
+  public async submitSnapshotRequest (
+    channelName: string,
+    blockNumber: number,
+    options?: OptionsType,
+  ): Promise<InfraRunnerResultType> {
+    const result = await this.infraRunCommand(
+      [
+        'peer', 'snapshot', 'submitrequest',
+        '-c', channelName,
+        '-b', blockNumber.toString(),
+        '--peerAddress', `${process.env.PEER_ADDRESS}`,
+        '--tlsRootCertFile', `${this.dockerPath}/tlsca/${process.env.BDK_HOSTNAME}.${process.env.BDK_ORG_DOMAIN}/ca.crt`,
+      ],
+      OrgTypeEnum.PEER,
+      undefined,
+      undefined,
+      options,
+    )
+    return result
+  }
+
+  public async listPendingSnapshots (
+    channelName: string,
+    options?: OptionsType,
+  ): Promise<InfraRunnerResultType> {
+    return await this.infraRunCommand(
+      [
+        'peer', 'snapshot', 'listpending',
+        '-c', channelName,
+        '--peerAddress', `${process.env.PEER_ADDRESS}`,
+        '--tlsRootCertFile', `${this.dockerPath}/tlsca/${process.env.BDK_HOSTNAME}.${process.env.BDK_ORG_DOMAIN}/ca.crt`,
+      ],
+      OrgTypeEnum.PEER,
+      undefined,
+      undefined,
+      options,
+    )
+  }
+
+  public async cancelSnapshotRequest (
+    channelName: string,
+    blockNumber: number,
+    options?: OptionsType,
+  ): Promise<InfraRunnerResultType> {
+    return await this.infraRunCommand(
+      [
+        'peer', 'snapshot', 'cancelrequest',
+        '-c', channelName,
+        '-b', blockNumber.toString(),
+        '--peerAddress', `${process.env.PEER_ADDRESS}`,
+        '--tlsRootCertFile', `${this.dockerPath}/tlsca/${process.env.BDK_HOSTNAME}.${process.env.BDK_ORG_DOMAIN}/ca.crt`,
+      ],
+      OrgTypeEnum.PEER,
+      undefined,
+      undefined,
+      options,
+    )
+  }
+
+  public async joinBySnapshot (
+    snapshotPath: string,
+    options?: OptionsType,
+  ): Promise<InfraRunnerResultType> {
+    return await this.infraRunCommand(
+      [
+        'peer', 'channel', 'joinbysnapshot',
+        '--snapshotpath', snapshotPath,
+      ],
+      OrgTypeEnum.PEER,
+      undefined,
+      undefined,
+      options,
+    )
+  }
 }

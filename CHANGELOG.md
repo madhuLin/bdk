@@ -3,6 +3,30 @@
 這份文件將記錄 BDK 專案的變更日誌
 
 All notable changes to BDK project will be documented here.
+
+## [v3.4.0](https://github.com/cathayddt/bdk/releases/tag/v3.4.0) - 2025-08-04
+
+### Features
+
+* Add 4 snapshot commands: submitSnapshot, listPending, cancelRequest, joinBySnapshot
+* Update fabric version to v2.5.10
+
+### Fixes
+
+* Try mounted tmp file for endorser connection error
+* Run the container as user to fix permission denied error
+* Comment mounted folder to fix permission error
+* Force delete by deleteNetworkFolder in bdkFile.ts
+* Fix unit test permission denied error
+* Fix e type unknown
+* Use try catch to resolve the rmSync error
+* Force delete file after test
+
+### Documentation
+
+* Modify snapshot example
+* Add snapshot operations to docs
+
 ## [v3.3.1](https://github.com/cathayddt/bdk/releases/tag/v3.3.1) - 2025-07-28
 
 ### Features
