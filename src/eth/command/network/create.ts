@@ -213,6 +213,7 @@ export const handler = async (argv: Arguments<OptType>) => {
     }
     )()
     const spinner = ora(`${networkTypeWithBigFirstLetter} Network Create ...`).start()
+    console.log(`Network Create: ${JSON.stringify(networkCreate, null, 2)}`)
     await network.create(networkCreate)
     spinner.succeed(`${networkTypeWithBigFirstLetter} Network Create Successfully!`)
   }
