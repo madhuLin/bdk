@@ -7,6 +7,7 @@
 - [加入新建 Channel](#加入新建-channel)
 - [加入新 Peer org](#加入新-peer-org)
 - [加入新 Orderer org](#加入新-orderer-org)
+- [使用 Snapshot 加入 Channel](#使用-snapshot-加入-channel)
 
 ## 建立 Blockchain network
 
@@ -48,7 +49,8 @@
       "enableNodeOUs": true,
       "hostname": [
         "orderer0",
-        "orderer1"
+        "orderer1",
+        "orderer2"
       ],
       "ports": [
         {
@@ -61,6 +63,12 @@
           "port": 7150,
           "isPublishPort": true,
           "operationPort": 8543,
+          "isPublishOperationPort": true
+        },
+        {
+          "port": 7250,
+          "isPublishPort": true,
+          "operationPort": 8643,
           "isPublishOperationPort": true
         }
       ]
@@ -96,15 +104,15 @@
       "userCount": 1,
       "ports": [
         {
-          "port": 7051,
+          "port": 8051,
           "isPublishPort": true,
-          "operationPort": 9443,
+          "operationPort": 9543,
           "isPublishOperationPort": true
         },
         {
-          "port": 7051,
+          "port": 8051,
           "isPublishPort": false,
-          "operationPort": 9443,
+          "operationPort": 9543,
           "isPublishOperationPort": false
         }
       ]
@@ -182,6 +190,17 @@ bdk fabric channel join -i
 - test
 - orderer0.orderer.org0.example.com:7050
 ```bash
+# Org1 的 peer0 加入 channel
+export BDK_ORG_NAME='Org1'
+export BDK_ORG_DOMAIN='org1.example.com'
+export BDK_HOSTNAME='peer0'
+
+bdk fabric channel join -i
+```
+選擇
+- test
+- orderer0.orderer.org0.example.com:7050
+```bash
 # Org1 的 peer1 加入 channel
 export BDK_ORG_NAME='Org1'
 export BDK_ORG_DOMAIN='org1.example.com'
@@ -213,14 +232,14 @@ bdk fabric channel update-anchorpeer -i
 # Org1 的 peer1 加入 channel
 export BDK_ORG_NAME='Org1'
 export BDK_ORG_DOMAIN='org1.example.com'
-export BDK_HOSTNAME='peer1'
+export BDK_HOSTNAME='peer0'
 
 bdk fabric channel update-anchorpeer -i
 ```
 選擇
 - test
 - orderer0.orderer.org0.example.com:7050
-- 7051
+- 8051
 
 ## 部署 Chaincode
 
@@ -480,6 +499,17 @@ bdk fabric channel join -i
 - test1
 - orderer0.orderer.org0.example.com:7050
 ```bash
+# Org1 的 peer0 加入 channel
+export BDK_ORG_NAME='Org1'
+export BDK_ORG_DOMAIN='org1.example.com'
+export BDK_HOSTNAME='peer0'
+
+bdk fabric channel join -i
+```
+選擇
+- test1
+- orderer0.orderer.org0.example.com:7050
+```bash
 # Org1 的 peer1 加入 channel
 export BDK_ORG_NAME='Org1'
 export BDK_ORG_DOMAIN='org1.example.com'
@@ -511,7 +541,7 @@ bdk fabric channel update-anchorpeer -i
 # Org1 的 peer1 加入 channel
 export BDK_ORG_NAME='Org1'
 export BDK_ORG_DOMAIN='org1.example.com'
-export BDK_HOSTNAME='peer1'
+export BDK_HOSTNAME='peer0'
 
 bdk fabric channel update-anchorpeer -i
 ```
@@ -615,6 +645,22 @@ peer channel getinfo -c {channelName}
 - Step 2 只是生成配置更新文件，**必須執行 Step 2.1 提交到 orderer 才會生效**
 - 沒有執行 Step 2.1 的話，新組織的 peer 會出現 `FORBIDDEN` 錯誤
 - 配置更新需要有管理權限的組織（如 Org0）來提交
+首先要準備檔案 *org-peer-create.json*，將所需要的參數放入到 *org-peer-create.json* 中，之後使用 `cryptogen` 的方式產生憑證和私鑰，準備 Peer 的組織所需要的相關文件，之後將 Orgnew 的資訊加入到 Application channel 設定檔中，啟動新組織 Orgnew 的 Peer 並且把他加入到名稱為 `test` 的 Channel 中，再測試以 Orgnew 發起交易和查詢交易資訊
+
+### 重要流程說明
+
+**完整的新 Peer 組織加入流程包含以下關鍵步驟：**
+
+1. **生成組織憑證和配置文件** - 使用 `bdk fabric org peer create` 
+2. **生成頻道配置更新** - 使用 `bdk fabric org peer add-channel` 
+3. **⚠️ 關鍵步驟：提交配置更新到 orderer** - 使用 `peer channel update` 命令
+4. **啟動新組織的 peer 容器**
+5. **所有 peer 個別加入頻道** - 使用 `bdk fabric channel join`
+
+**注意事項：**
+- Step 2 只是生成配置更新文件，**必須執行 Step 2.1 提交到 orderer 才會生效**
+- 沒有執行 Step 2.1 的話，新組織的 peer 會出現 `FORBIDDEN` 錯誤
+- 配置更新需要有管理權限的組織（如 Org0）來提交
 
 ### 預先準備的檔案
 
@@ -647,6 +693,7 @@ peer channel getinfo -c {channelName}
       "domain": "orgnew.example.com",
       "enableNodeOUs": true,
       "peerCount": 2,
+      "peerCount": 2,
       "userCount": 1,
       "ports": [
         {
@@ -675,7 +722,9 @@ bdk fabric org peer create -f ./org-peer-create.json --create-full
 ```
 
 ### Step 2：將 Orgnew 加入 Channel 配置中
+### Step 2：將 Orgnew 加入 Channel 配置中
 
+由 Org0 組織身份將 Orgnew 加入 Application Channel 配置
 由 Org0 組織身份將 Orgnew 加入 Application Channel 配置
 
 ```bash
@@ -687,7 +736,35 @@ bdk fabric org peer add -i
 ```
 選擇
 - test
+- test
 - Orgnew
+
+**重要：此步驟只是生成配置更新文件，還需要下一步提交到 orderer 才能生效**
+
+### Step 2.1：提交配置更新到 Orderer
+
+**關鍵步驟**：將配置更新提交到 orderer 使其生效。使用 BDK 的 `channel update` 指令即可完成此步驟。
+
+```bash
+export BDK_ORG_NAME='Org0'
+export BDK_ORG_DOMAIN='org0.example.com'
+export BDK_HOSTNAME='peer0'
+
+bdk fabric channel update -c test -o orderer0.orderer.org0.example.com:7050
+```
+
+**或使用互動式模式：**
+```bash
+bdk fabric channel update -i
+```
+選擇
+- test
+- orderer0.orderer.org0.example.com:7050
+
+**注意事項**：
+- 此步驟必須由有管理權限的組織（如 Org0）執行
+- 執行成功後，新組織才真正被加入到頻道配置中
+- 此步驟成功後，新組織的 peer 才能加入頻道
 
 **重要：此步驟只是生成配置更新文件，還需要下一步提交到 orderer 才能生效**
 
@@ -728,7 +805,9 @@ export BDK_HOSTNAME='peer0'
 bdk fabric peer up -i
 ```
 選擇 peer0.orgnew.example.com, peer1.orgnew.example.com
+選擇 peer0.orgnew.example.com, peer1.orgnew.example.com
 
+### Step 4：Orgnew 加入 system-channel
 ### Step 4：Orgnew 加入 system-channel
 
 由 Org0Orderer 組織身份將 Orgnew 加入 System Channel 並同意
@@ -762,6 +841,7 @@ export BDK_HOSTNAME='peer0'
 bdk fabric channel join -i
 ```
 選擇
+- test
 - test
 - orderer0.orderer.org0.example.com:7050
 
@@ -808,6 +888,7 @@ bdk fabric chaincode approve -i
 ```
 選擇
 - test
+- test
 - fabcar
 - 1
 - true
@@ -839,8 +920,10 @@ bdk fabric chaincode invoke -i
 ```
 選擇
 - test
+- test
 - fabcar
 - CreateCar
+- CAR_ORGNEW_PEER0, BMW, X6, blue, Orgnew
 - CAR_ORGNEW_PEER0, BMW, X6, blue, Orgnew
 - false
 - Yes
@@ -852,6 +935,7 @@ bdk fabric chaincode invoke -i
 bdk fabric chaincode query -i
 ```
 選擇
+- test
 - test
 - fabcar
 - QueryCar
@@ -944,9 +1028,9 @@ bdk fabric org orderer create --interactive
 - org1orderer.example.com
 - True
 - orderer0
-- 7050
+- 7350
 - True
-- 8443
+- 8743
 - True
 - new.genesis
 - Yes, please generate them for me with cryptogen
@@ -957,19 +1041,23 @@ bdk fabric org orderer create --interactive
 
 ```bash
 export BDK_ORG_TYPE='orderer'
-export BDK_ORG_NAME='Org1Orderer'
-export BDK_ORG_DOMAIN='org1orderer.example.com'
+export BDK_ORG_NAME='Org0Orderer'
+export BDK_ORG_DOMAIN='orderer.org0.example.com'
 export BDK_HOSTNAME='orderer0'
 # system-channel
 bdk fabric org orderer add --interactive
 ```
+選擇
+- orderer0.orderer.org0.example.com:7050
+- system-channel
+- Org1Orderer
 
 ### Step 3：Orderer org 加入 channel
 
 ```bash
 export BDK_ORG_TYPE='orderer'
-export BDK_ORG_NAME='Org1Orderer'
-export BDK_ORG_DOMAIN='org1orderer.example.com'
+export BDK_ORG_NAME='Org0Orderer'
+export BDK_ORG_DOMAIN='orderer.org0.example.com'
 export BDK_HOSTNAME='orderer0'
 # application 
 bdk fabric org orderer add --interactive
