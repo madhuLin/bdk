@@ -3,6 +3,16 @@
 這份文件將記錄 BDK 專案的變更日誌
 
 All notable changes to BDK project will be documented here.
+## [v3.4.1](https://github.com/cathayddt/bdk/releases/tag/v3.4.1) - 2025-09-19
+
+### Fixes
+
+* Remote solc compilation path problem、The get command is not displayed
+
+### Documentation
+
+* [#136](https://github.com/cathayddt/bdk/issues/136) update EXAMPLE.md
+
 
 ## [v3.4.0](https://github.com/cathayddt/bdk/releases/tag/v3.4.0) - 2025-08-04
 

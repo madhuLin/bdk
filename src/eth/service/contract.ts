@@ -208,28 +208,28 @@ export default class Contract extends AbstractService {
       const processedFiles = new Set()
       const sources: Record<string, { content: string }> = {}
 
-function readFile(filePath: string, basePath: string = contractFolderPath) {
-  const resolvedPath = path.resolve(filePath)
-  if (processedFiles.has(resolvedPath)) return
-  processedFiles.add(resolvedPath)
+      function readFile (filePath: string, basePath: string = contractFolderPath) {
+        const resolvedPath = path.resolve(filePath)
+        if (processedFiles.has(resolvedPath)) return
+        processedFiles.add(resolvedPath)
 
-  const content = fs.readFileSync(resolvedPath, 'utf8')
-  const key = path.relative(basePath, resolvedPath).replace(/\\/g, '/')
-  sources[key] = { content }
+        const content = fs.readFileSync(resolvedPath, 'utf8')
+        const key = path.relative(basePath, resolvedPath).replace(/\\/g, '/')
+        sources[key] = { content }
 
-  // 尋找 import
-  const importRegex = /import\s+["']([^"']+)["'];/g
-  let match
-  while ((match = importRegex.exec(content)) !== null) {
-    const importedFile = match[1]
-    // 只支持相對路徑
-    if (!importedFile.startsWith('.')) {
-      throw new Error(`❌ Non-relative import not supported: ${importedFile}`)
-    }
-    const importPath = path.resolve(path.dirname(resolvedPath), importedFile)
-    readFile(importPath, basePath)
-  }
-}
+        // 尋找 import
+        const importRegex = /import\s+["']([^"']+)["'];/g
+        let match
+        while ((match = importRegex.exec(content)) !== null) {
+          const importedFile = match[1]
+          // 只支持相對路徑
+          if (!importedFile.startsWith('.')) {
+            throw new Error(`❌ Non-relative import not supported: ${importedFile}`)
+          }
+          const importPath = path.resolve(path.dirname(resolvedPath), importedFile)
+          readFile(importPath, basePath)
+        }
+      }
       readFile(path.resolve(contractFolderPath, filename))
       return sources
     }
@@ -251,13 +251,13 @@ function readFile(filePath: string, basePath: string = contractFolderPath) {
       }
 
       const importCallback = (importPath: string) => {
-      const resolvedPath = path.resolve(contractFolderPath, importPath)
-      if (!fs.existsSync(resolvedPath)) {
-        return { error: `File not found: ${importPath}` }
+        const resolvedPath = path.resolve(contractFolderPath, importPath)
+        if (!fs.existsSync(resolvedPath)) {
+          return { error: `File not found: ${importPath}` }
+        }
+        const content = fs.readFileSync(resolvedPath, 'utf8')
+        return { contents: content }
       }
-      const content = fs.readFileSync(resolvedPath, 'utf8')
-      return { contents: content }
-}
 
       // Compile the contract
       const output = solcInstance ? JSON.parse(solcInstance.compile(JSON.stringify(input), {
@@ -271,7 +271,7 @@ function readFile(filePath: string, basePath: string = contractFolderPath) {
         if (output.errors && output.errors.length > 0) {
           const formattedErrors = output.errors
             .map((e: { severity?: string; formattedMessage?: string; message?: string }) =>
-              `[${e.severity?.toUpperCase() || 'UNKNOWN'}] ${e.formattedMessage || e.message}`
+              `[${e.severity?.toUpperCase() || 'UNKNOWN'}] ${e.formattedMessage || e.message}`,
             )
             .join('\n')
           throw new SolcError(`❌ Solidity Compile Error:\n${formattedErrors}`)
