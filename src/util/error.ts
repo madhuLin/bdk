@@ -17,7 +17,7 @@ export class NotFoundWarn extends BdkWarn {}
 export class FileWriteError extends BdkError {}
 export class DeployError extends BdkError {}
 export class DataError extends BdkError {}
-
+export class SnapshotError extends BdkError {}
 export class FabricContainerError extends BdkError {
   public stdout: string
   constructor (message: string, stdout: string) {

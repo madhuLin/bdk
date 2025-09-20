@@ -133,6 +133,7 @@ export default class Contract extends AbstractService {
    * @param compileFunction
    */
   public compile (contractFolderPath: string, contractFilePath: string, compileFunction: string, solcInstance: MinimalSolcInstance | null = null) {
+    contractFilePath = path.basename(contractFilePath)
     switch (compileFunction) {
       case 'bdkSolc':
         this.bdkSolcCompile(contractFolderPath, contractFilePath)
@@ -160,7 +161,7 @@ export default class Contract extends AbstractService {
    * @param params
    * @returns
    */
-  public async deploy (contractFilePath: string, privateKey: string, port: string, params: any, value: string) {
+  public async deploy (contractFilePath: string, privateKey: string, rpcUrl: string, params: any, value: string) {
     try {
       let contractJson
       try {
@@ -171,7 +172,7 @@ export default class Contract extends AbstractService {
       if (!contractJson || typeof contractJson !== 'object' || !contractJson.abi || !contractJson.bytecode) {
         throw new DeployError(`Invalid contract JSON structure: ${contractFilePath}`)
       }
-      const provider = new ethers.JsonRpcProvider(port)
+      const provider = new ethers.JsonRpcProvider(rpcUrl)
       const wallet = this.createWallet(privateKey, provider)
       const abi = contractJson.abi
       const bytecode = contractJson.bytecode
@@ -207,30 +208,28 @@ export default class Contract extends AbstractService {
       const processedFiles = new Set()
       const sources: Record<string, { content: string }> = {}
 
-      function readFile (filePath: string) {
-        if (processedFiles.has(filePath)) return
-        processedFiles.add(filePath)
+      function readFile (filePath: string, basePath: string = contractFolderPath) {
+        const resolvedPath = path.resolve(filePath)
+        if (processedFiles.has(resolvedPath)) return
+        processedFiles.add(resolvedPath)
 
-        const content = fs.readFileSync(filePath, 'utf8')
-        sources[path.relative(contractFolderPath, filePath)] = { content }
+        const content = fs.readFileSync(resolvedPath, 'utf8')
+        const key = path.relative(basePath, resolvedPath).replace(/\\/g, '/')
+        sources[key] = { content }
 
+        // 尋找 import
         const importRegex = /import\s+["']([^"']+)["'];/g
         let match
         while ((match = importRegex.exec(content)) !== null) {
           const importedFile = match[1]
-          let importPath: string
-          if (importedFile.startsWith('.')) {
-            importPath = path.resolve(path.dirname(filePath), importedFile)
-            readFile(importPath)
-          } else {
-            // node_modules module
-            importPath = require.resolve(importedFile, {
-              paths: [contractFolderPath],
-            })
+          // 只支持相對路徑
+          if (!importedFile.startsWith('.')) {
+            throw new Error(`❌ Non-relative import not supported: ${importedFile}`)
           }
+          const importPath = path.resolve(path.dirname(resolvedPath), importedFile)
+          readFile(importPath, basePath)
         }
       }
-
       readFile(path.resolve(contractFolderPath, filename))
       return sources
     }
@@ -251,14 +250,13 @@ export default class Contract extends AbstractService {
         },
       }
 
-      const importCallback = function (importPath: string) {
-        try {
-          const resolvedPath = require.resolve(importPath, { paths: [contractFolderPath] })
-          const content = fs.readFileSync(resolvedPath, 'utf8')
-          return { contents: content }
-        } catch (err) {
+      const importCallback = (importPath: string) => {
+        const resolvedPath = path.resolve(contractFolderPath, importPath)
+        if (!fs.existsSync(resolvedPath)) {
           return { error: `File not found: ${importPath}` }
         }
+        const content = fs.readFileSync(resolvedPath, 'utf8')
+        return { contents: content }
       }
 
       // Compile the contract
@@ -270,7 +268,14 @@ export default class Contract extends AbstractService {
         }))
 
       if (output.errors) {
-        throw new SolcError(`❌ Solidity Compile Error: ${output.errors}`)
+        if (output.errors && output.errors.length > 0) {
+          const formattedErrors = output.errors
+            .map((e: { severity?: string; formattedMessage?: string; message?: string }) =>
+              `[${e.severity?.toUpperCase() || 'UNKNOWN'}] ${e.formattedMessage || e.message}`,
+            )
+            .join('\n')
+          throw new SolcError(`❌ Solidity Compile Error:\n${formattedErrors}`)
+        }
       }
 
       const buildDir = path.resolve(contractFolderPath, 'build')
@@ -281,7 +286,7 @@ export default class Contract extends AbstractService {
         Object.keys(output.contracts[sourceFile]).forEach((contractName) => {
           const contractData = output.contracts[sourceFile][contractName]
           if (!contractData?.abi || !contractData?.evm?.bytecode?.object) {
-            logger.warn(`⚠️ Contract ${contractName} has no ABI or bytecode.`)
+            // logger.warn(`⚠️ Contract ${contractName} has no ABI or bytecode.`)
             return
           }
           const contractPath = path.join(buildDir, `${contractName}.json`)
@@ -297,7 +302,7 @@ export default class Contract extends AbstractService {
         })
       })
     } catch (error) {
-      throw new SolcError(`❌ An error occurred during compilation: ${error}`)
+      throw new SolcError(`${error}`)
     }
   }
 
