@@ -222,11 +222,18 @@ export default class Contract extends AbstractService {
         let match
         while ((match = importRegex.exec(content)) !== null) {
           const importedFile = match[1]
-          // 只支持相對路徑
-          if (!importedFile.startsWith('.')) {
-            throw new Error(`❌ Non-relative import not supported: ${importedFile}`)
+          let importPath
+          if (importedFile.startsWith('.')) {
+            // 相對路徑
+            importPath = path.resolve(path.dirname(resolvedPath), importedFile)
+          } else {
+            // 非相對路徑，嘗試 node_modules
+            const nodeModulesPath = path.resolve(process.cwd(), 'node_modules', importedFile)
+            if (!fs.existsSync(nodeModulesPath)) {
+              throw new Error(`❌ Import not found: ${importedFile}`)
+            }
+            importPath = nodeModulesPath
           }
-          const importPath = path.resolve(path.dirname(resolvedPath), importedFile)
           readFile(importPath, basePath)
         }
       }
@@ -251,10 +258,20 @@ export default class Contract extends AbstractService {
       }
 
       const importCallback = (importPath: string) => {
-        const resolvedPath = path.resolve(contractFolderPath, importPath)
+        let resolvedPath
+
+        if (importPath.startsWith('.')) {
+          // 相對路徑
+          resolvedPath = path.resolve(contractFolderPath, importPath)
+        } else {
+          // 非相對路徑，嘗試從 node_modules 尋找
+          resolvedPath = path.resolve(process.cwd(), 'node_modules', importPath)
+        }
+
         if (!fs.existsSync(resolvedPath)) {
           return { error: `File not found: ${importPath}` }
         }
+
         const content = fs.readFileSync(resolvedPath, 'utf8')
         return { contents: content }
       }
