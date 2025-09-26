@@ -56,7 +56,6 @@
     "ethers": "^6.13.4",
     "fs-extra": "^9.1.0",
     "git-cliff": "^1.4.0",
-    "git-cliff": "^1.4.0",
     "ink": "^3.2.0",
     "ink-select-input": "^4.2.2",
     "js-yaml": "^4.1.0",
