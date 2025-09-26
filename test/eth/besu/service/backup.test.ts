@@ -33,7 +33,7 @@ describe('Besu.Backup', function () {
 
   after(async () => {
     // Delete all backup files
-    fs.rmSync(resolve(`${bdkPath}/backup`), { recursive: true })
+    fs.rmSync(resolve(`${bdkPath}/backup`), { recursive: true, force: true })
     await network.delete()
   })
 
