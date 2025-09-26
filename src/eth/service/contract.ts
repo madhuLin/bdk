@@ -325,18 +325,23 @@ export default class Contract extends AbstractService {
 
   private localSolcCompile (contractFolderPath: string, filename: string): void {
     const contractPath = path.resolve(contractFolderPath, filename)
-    const output = childProcess.execFileSync(
-      'solc',
-      [
-        '--base-path', '.',
-        '--include-path', 'node_modules/',
-        '--optimize',
-        '--evm-version', 'istanbul',
-        '--combined-json', 'abi,bin',
-        contractPath,
-      ],
-      { encoding: 'utf-8' },
-    )
+    let output: string
+    try {
+      output = childProcess.execFileSync(
+        'solc',
+        [
+          '--base-path', '.',
+          '--include-path', 'node_modules/',
+          '--optimize',
+          '--evm-version', 'istanbul',
+          '--combined-json', 'abi,bin',
+          contractPath,
+        ],
+        { encoding: 'utf-8' },
+      )
+    } catch (error: any) {
+      throw new SolcError(`SolcError❌ An error occurred during compilation: ${error.message}`)
+    }
 
     const buildDir = path.resolve(contractFolderPath, 'build')
     if (!fs.existsSync(buildDir)) {
