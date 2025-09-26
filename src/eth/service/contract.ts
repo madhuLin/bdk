@@ -335,7 +335,7 @@ export default class Contract extends AbstractService {
         '--combined-json', 'abi,bin',
         contractPath,
       ],
-      { encoding: 'utf-8' }
+      { encoding: 'utf-8' },
     )
 
     const buildDir = path.resolve(contractFolderPath, 'build')
