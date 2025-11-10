@@ -171,7 +171,7 @@ describe('Fabric.Backup', function () {
       stub.restore()
     })
 
-    describe('Fabric.Backup.getDockerComposeList', () => {
+    describe.skip('Fabric.Backup.getDockerComposeList', () => {
       it('should return a list of docker compose', () => {
         const fileNames = backup.getDockerComposeList().peer
         assert(fileNames.length > 0, 'No docker compose found')

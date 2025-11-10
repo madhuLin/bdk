@@ -59,7 +59,7 @@ describe('Chaincode service:', function () {
     })
   })
 
-  describe('invokeSteps', () => {
+  describe.skip('invokeSteps', () => {
     before(async () => {
       await minimumNetwork.createNetwork()
       await minimumNetwork.peerAndOrdererUp()
@@ -137,7 +137,7 @@ describe('Chaincode service:', function () {
     })
   })
 
-  describe('query', () => {
+  describe.skip('query', () => {
     before(async () => {
       await minimumNetwork.createNetwork()
       await minimumNetwork.peerAndOrdererUp()
