@@ -303,7 +303,6 @@ export default class Contract extends AbstractService {
         Object.keys(output.contracts[sourceFile]).forEach((contractName) => {
           const contractData = output.contracts[sourceFile][contractName]
           if (!contractData?.abi || !contractData?.evm?.bytecode?.object) {
-            // logger.warn(`⚠️ Contract ${contractName} has no ABI or bytecode.`)
             return
           }
           const contractPath = path.join(buildDir, `${contractName}.json`)
@@ -326,13 +325,19 @@ export default class Contract extends AbstractService {
   private localSolcCompile (contractFolderPath: string, filename: string): void {
     const contractPath = path.resolve(contractFolderPath, filename)
     let output: string
-    const cliCmd = [
-      'solc --base-path . --include-path node_modules/ --optimize',
-      '--evm-version istanbul',
-      `--combined-json abi,bin ${contractPath}`,
-    ].join(' ')
     try {
-      output = childProcess.execSync(cliCmd, { encoding: 'utf-8' })
+      output = childProcess.execFileSync(
+        'solc',
+        [
+          '--base-path', '.',
+          '--include-path', 'node_modules/',
+          '--optimize',
+          '--evm-version', 'istanbul',
+          '--combined-json', 'abi,bin',
+          contractPath,
+        ],
+        { encoding: 'utf-8' },
+      )
     } catch (error: any) {
       throw new SolcError(`SolcError❌ An error occurred during compilation: ${error.message}`)
     }

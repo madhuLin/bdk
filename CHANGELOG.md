@@ -3,16 +3,17 @@
 這份文件將記錄 BDK 專案的變更日誌
 
 All notable changes to BDK project will be documented here.
-## [v3.4.1](https://github.com/cathayddt/bdk/releases/tag/v3.4.1) - 2025-09-19
+## [v3.4.1](https://github.com/cathayddt/bdk/releases/tag/v3.4.1) - 2025-09-26
 
 ### Fixes
 
-* Remote solc compilation path problem、The get command is not displayed
+* Fixed project safety warning  
+* Fixed remote `solc` compilation path issue and missing `get` command display  
+* Fixed quick setup for Besu chain to build a Quorum network
 
 ### Documentation
 
-* [#136](https://github.com/cathayddt/bdk/issues/136) update EXAMPLE.md
-
+* Update EXAMPLE.md
 
 ## [v3.4.0](https://github.com/cathayddt/bdk/releases/tag/v3.4.0) - 2025-08-04
 
